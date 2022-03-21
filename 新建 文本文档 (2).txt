@@ -1,0 +1,12 @@
+path = "/home/sq/makefile/total_ocr"
+def wenbenhuizong(datapath):
+    for fname_in in pathlib.Path(datapath).glob('*/'):
+        f = open(fname_in, encoding="utf-8")
+        str = f.read()  # str放到一个
+        if len(str) == 0:
+            continue
+        print(str)
+
+for fname_in in pathlib.Path(path).glob('*/'):
+    print(os.path.basename(fname_in))
+    wenbenhuizong(fname_in)
