@@ -1,0 +1,9 @@
+这是全连接层
+conv3_flat = slim.flatten(conv3)
+out = slim.fully_connected(conv3_flat, num_outputs=10, normalizer_fn=None, normalizer_params=None,activation_fn=None, scope='output')
+
+这是卷积处理
+out = slim.conv2d(conv3, 10, [1, 1], activation_fn=None, normalizer_fn=None, scope='output_conv')
+out = tf.reduce_mean(out, [1, 2], name='output', keepdims=False)
+
+来源：https://blog.csdn.net/weixin_39875161/article/details/104174015
