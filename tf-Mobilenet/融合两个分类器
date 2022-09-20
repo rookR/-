@@ -1,0 +1,118 @@
+import pathlib
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
+os.environ['CUDA_VISIBLE_DEVICES'] = "1"
+import numpy as np
+import cv2
+import time
+import tensorflow as tf
+tf.compat.v1.enable_eager_execution()
+import argparse
+from prepare_data import generate_datasets,load_and_preprocess_image
+import math
+import tensorflow.keras as nn
+from configuration import IMAGE_HEIGHT, IMAGE_WIDTH, CHANNELS, \
+    EPOCHS, BATCH_SIZE, save_model_dir, save_every_n_epoch
+
+# 将两个分类器的结果直接加起来
+
+def process_features(features, data_augmentation, trainlabel):
+    image_raw = features['image_raw'].numpy()
+    image_path = features['image_path'].numpy()
+    image_tensor_list = []
+    image_masktensor_list = []
+    for i in range(len(image_path)):
+        image_tensor,image_mask_tensor = load_and_preprocess_image(image_raw[i], image_path[i], data_augmentation=data_augmentation, trainlabel = trainlabel)
+        image_tensor_list.append(image_tensor)
+        image_masktensor_list.append(image_mask_tensor)
+    images = tf.stack(image_tensor_list, axis=0)
+    images_mask = tf.stack(image_masktensor_list, axis=0)
+    labels = features['label'].numpy()
+    return images, images_mask, labels
+
+if __name__ == '__main__':
+    print(time.strftime("%Y-%m-%d-%H_%M_%S", time.localtime()))
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--idx", default=0, type=int)
+
+    # print(tf.test.is_gpu_available())
+    config = tf.compat.v1.ConfigProto(gpu_options=tf.compat.v1.GPUOptions(allow_growth=True))
+    sess = tf.compat.v1.Session(config=config)
+
+    num_classes = 2332
+    gpus = tf.config.list_physical_devices('GPU')
+
+    if gpus:
+        try:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            logical_gpus = tf.config.list_logical_devices('GPU')
+            # print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            print(e)
+
+    args = parser.parse_args()
+
+    # get the dataset
+    train_dataset, test_dataset, train_count, test_count = generate_datasets()
+
+    model = tf.keras.Sequential([nn.applications.MobileNet(include_top=False, weights='imagenet'),
+                                   tf.keras.layers.GlobalAvgPool2D(),
+                                 tf.keras.layers.Dropout(rate=0.5),
+                                 tf.keras.layers.Dense(num_classes),
+                                 tf.keras.layers.Softmax()])
+
+    model_mask = tf.keras.Sequential([nn.applications.MobileNet(include_top=False, weights='imagenet'),
+                                   tf.keras.layers.GlobalAvgPool2D(),
+                                 tf.keras.layers.Dropout(rate=0.5),
+                                 tf.keras.layers.Dense(num_classes),
+                                 tf.keras.layers.Softmax()])
+
+    model.load_weights("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/models_aug/epoch-49")
+    # model.compile(optimizer = nn.optimizers.Adam(learning_rate=1e-3),
+    #               loss='sparse_categorical_crossentropy',
+    #               metrics=['accuracy'])
+    model_mask.load_weights("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/tfrecords_mask/atten_modify/epoch-29")
+    # model_mask.compile(optimizer=nn.optimizers.Adam(learning_rate=1e-3),
+    #                 loss='sparse_categorical_crossentropy',
+    #                 metrics=['accuracy'])
+
+    model.summary()
+    model_mask.summary()
+
+    total_correct3 = 0
+    total_correct1 = 0
+    total_correct2 = 0
+    step = 0
+    print(test_count)
+    for features in test_dataset:
+        print("step:{}/{}".format(step,math.ceil(test_count / BATCH_SIZE)))
+        valid_images, valid_mask, valid_labels = process_features(features, data_augmentation=False,trainlabel=False)
+
+        img_pred1 = model(valid_images, training=False)
+        imgmask_pred2 = model_mask(valid_mask, training=False)
+
+        pred_fu3 = tf.add(img_pred1, imgmask_pred2)
+
+        pred3 = tf.argmax(pred_fu3,1)
+        pred3 = tf.cast(pred3, dtype=valid_labels.dtype)
+        correct3 = tf.cast(tf.equal(pred3, valid_labels), dtype=tf.int32)
+        total_correct3 += int(tf.reduce_sum(correct3))
+
+        pred1 = tf.cast(tf.argmax(img_pred1,1), dtype=valid_labels.dtype)
+        correct1 = tf.cast(tf.equal(pred1, valid_labels), dtype=tf.int32)
+        total_correct1 += int(tf.reduce_sum(correct1))
+
+        pred2 = tf.cast(tf.argmax(imgmask_pred2, 1), dtype=valid_labels.dtype)
+        correct2 = tf.cast(tf.equal(pred2, valid_labels), dtype=tf.int32)
+        total_correct2 += int(tf.reduce_sum(correct2))
+
+        step += 1
+
+
+    print('img_corrects: ', total_correct1)
+    print('mask_corrects: ',total_correct2)
+    print('total_corrects: ',total_correct3)
+
+    print('test_count: ',test_count)
