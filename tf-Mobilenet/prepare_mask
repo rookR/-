@@ -1,0 +1,72 @@
+def load_and_preprocess_image(image_raw, img_path, data_augmentation=False,trainlabel=True):
+    if trainlabel==True:
+        new_path="/home/sq/data/cropnpz/train/"
+    elif trainlabel==False:
+        new_path = "/home/sq/data/cropnpz/test/"
+    # decode
+    image_tensor = tf.io.decode_image(contents=image_raw, channels=CHANNELS, dtype=tf.dtypes.float32) # 得到图像的像素值
+    # print(image_tensor.dtype) height, width
+    mask = np.zeros((image_tensor.shape[0], image_tensor.shape[1]))
+    img_transpose = tf.transpose(image_tensor, perm=[2, 0, 1])
+
+    img_path = img_path.decode()
+    dir1=os.path.dirname(img_path) #/home/sq/data/dateset/rp2k_new/all/train/555（冰炫）
+    label_name=os.path.basename(dir1) # 555（冰炫）
+    file_name=os.path.basename(img_path)
+    base_name=os.path.splitext(file_name)[0]
+
+    npz_path=new_path+label_name+'/'+base_name+'.npz'
+    if os.path.exists(npz_path)==False:
+        print(img_path)
+        print(npz_path)
+    read=np.load(npz_path)
+    result = read['a']
+    it = iter(result)
+    for i in range(len(result)):
+        line = next(it)  # line = [[ 77, 511],[ 72, 418],[423, 399],[428, 493]]
+        left = min(line[0][0], line[1][0], line[2][0], line[3][0])
+        right = max(line[0][0], line[1][0], line[2][0], line[3][0])
+        upper = min(line[0][1], line[1][1], line[2][1], line[3][1])
+        lower = max(line[0][1], line[1][1], line[2][1], line[3][1])
+        # print("{},{},{},{}".format(upper, lower, left, right))
+        upper = max(upper, 0)
+        lower = max(lower, 0)
+        left = max(left, 0)
+        right = max(right, 0)
+        mask[int(upper):int(lower), int(left):int(right)] = 1
+    mask = np.resize(mask, [7, 7])
+    mask_tf=tf.convert_to_tensor(mask,dtype=image_tensor.dtype)
+    # tf.multiply(x, y, name=None) 矩阵x和矩阵y对应位置的元素相乘
+    # mul_two=mask_tf*img_transpose 之前覆盖原图像
+    # mul_two = tf.transpose(mul_two, perm=[1, 2, 0])
+    # image_testmask = tf.image.resize(mul_two, [IMAGE_HEIGHT, IMAGE_WIDTH])
+    # mul_two = mask_tf # 现在只需返回mask
+
+    if data_augmentation:
+        image = tf.image.resize(image_tensor, [IMAGE_HEIGHT, IMAGE_WIDTH])
+        image = seq.augment_image(image.numpy())
+        image_aug = tf.image.resize(image, [IMAGE_HEIGHT, IMAGE_WIDTH])
+        # image = tf.image.random_flip_left_right(image=image_tensor) # 左右翻转
+        # image = tf.image.resize_with_crop_or_pad(image=image,
+        #                                          target_height=int(IMAGE_HEIGHT * 1.2),
+        #                                          target_width=int(IMAGE_WIDTH * 1.2)) # 裁剪或填充
+        # image = tf.image.random_crop(value=image, size=[IMAGE_HEIGHT, IMAGE_WIDTH, CHANNELS]) # 随机裁剪
+        # image = tf.image.random_brightness(image=image, max_delta=0.5) # 随机改变亮度
+        # # 再加点图像增强，加噪声，稍稍的扭曲，旋转，仿射变换，模糊？，锐化？
+        # image = tf.image.random_contrast(image, 0.5, 1.5) # 对比度
+        # image = tf.image.random_hue(image, 0.2, seed=None)
+        # image = tf.image.random_flip_up_down
+        # image = tf.image.random_saturation # 饱和度
+
+        # with tf.Session() as sess:
+
+        # image = tf.image.crop_to_bounding_box(image = image, pad_bottom, pad_right, height, width)
+        # 高斯噪声
+        # image = aug_img(image_raw)
+    else:
+        image_aug = tf.image.resize(image_tensor, [IMAGE_HEIGHT, IMAGE_WIDTH])
+
+    return image_aug, mask_tf
+
+    # image = tf.image.resize(image_tensor, [IMAGE_HEIGHT, IMAGE_WIDTH])
+    # return image
