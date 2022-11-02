@@ -1,0 +1,7 @@
+predictions = model(test_images) # batch_size*维度
+tf.argmax(predictions, 1) # batch_size*1
+correct_prediction = tf.equal(tf.argmax(predictions, 1), test_labels) # tf.tensor([True,True,False]) batchsize*1
+tf.equal(tf.zeros_like(correct_prediction), correct_prediction) # True变False False变True
+tf.cast(correct_prediction,tf.float32) # tf.tensor([1,1,0])
+tf.reduce_sum(tf.cast(correct_prediction,tf.float32)) # correctnum
+tf.where(a) # 显示1的位置
