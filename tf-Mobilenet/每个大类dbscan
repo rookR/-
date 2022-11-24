@@ -1,0 +1,83 @@
+def dbscan():
+    kmeans_cent_dis = [] # kmeans的大类中心
+
+    xilidu = sorted(os.listdir("/home/sq/data/细粒度/train"))
+    scan = os.listdir("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/dbscan/")
+    unprocess = list(set(xilidu).difference(set(scan)))
+    process = [os.path.join("/home/sq/data/细粒度/train/",i) for i in unprocess]
+
+
+
+    # path = "/home/sq/data/细粒度/train"
+    # data_root = pathlib.Path(path)
+    # class_paths = [str(path) for path in list(data_root.glob('*/'))]  # /home/sq/data/细粒度/train/555
+    # class_paths = sorted(class_paths)
+    for index, class_path in enumerate(process):  # 没有子文件夹的就是 一个basename一个聚类
+        # print(index)
+    # class_paths = ['/home/sq/data/细粒度/train/一品苏黄']
+    # for class_path in class_paths:
+        class_feas = []
+        basename = os.path.basename(class_path)  # 白猫洗洁精
+
+        # 找出basename的索引，修改聚类中心
+        pos = xilidu.index(basename)
+
+        sub_class_paths = os.listdir(class_path)  # '白猫洗洁精500', '白猫生姜洗洁精1.7kg', '白猫洗洁精高效去油500' 或者[]
+        root_path = "/home/sq/data/dateset/rp2k_new/all/train/"
+        if sub_class_paths:  # 有子文件夹,需要提取出所有子文件夹里的特征
+            for sub_i in sub_class_paths:  # '白猫洗洁精500'
+                currentpath = pathlib.Path(root_path + sub_i)
+                img_paths = [str(path) for path in list(currentpath.glob('*/'))]  # 根据所有图像路径获取patch  白猫洗洁精500/**.jpg
+                for img_path in img_paths:
+                    temp = boxes(img_path, 1)
+                    class_feas.extend(temp)
+        else:
+            currentpath = pathlib.Path(root_path + basename)  # /home/sq/data/dateset/rp2k_new/all/train/SPF水润保湿防晒乳
+            img_paths = [str(path) for path in list(currentpath.glob('*/'))]  # 根据所有图像路径获取patch  白猫洗洁精500/**.jpg
+            for img_path in img_paths:
+                # print(img_path)
+                temp = boxes(img_path, 1)
+                class_feas.extend(temp) # 图像patch个数*2000
+        tag = 0
+        if len(class_feas) == 1 or len(class_feas) == 0:
+            tag = 1
+        else:
+            class_feas = np.squeeze(np.array(class_feas),axis=2)
+        # print(len(class_feas))
+        from sklearn.cluster import DBSCAN
+        for i in range(2,10):
+            if tag == 1:
+                kmeans_cent_dis.append(np.zeros((2000,)))
+                print(str(index) + basename + " have "+ str(len(class_feas))+" sift")
+                break
+            db = DBSCAN(eps=9, min_samples=i).fit(np.squeeze(np.array(class_feas)))
+            labels = db.labels_ # ndarray
+            if len(set(labels.tolist())) == 2:
+                tag = 1
+                # 使用kmeans得到类标签为0的图像的中心
+                zero_pos = np.squeeze(np.argwhere(labels == 0))
+
+                # 类标签为0的图像单独保存在文件夹中，为了后续检查
+                patch_path = []
+                for line in open("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/name.txt",'r'):
+                    patch_path.append(line.strip())
+                # 如果目录不存在，创建
+                base_path = "/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/dbscan_zero/"
+                if os.path.exists(os.path.join(base_path,basename)) is False:
+                    os.makedirs(os.path.join(base_path,basename))
+                for i in zero_pos:
+                    shutil.copy(patch_path[i],os.path.join(base_path,basename))
+
+                # feas_kmeans = np.array([class_feas[i] for i in zero_pos]) # kmeans聚类的输入 array
+                # mbk = KMeans(n_clusters=1).fit(feas_kmeans)
+                # kmeascenter[pos] = mbk.cluster_centers_
+                break
+        if tag==0:
+            print(str(index) + basename+" have no dbscan-cluster")
+        namefile = open("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/name.txt", 'ab')
+        namefile.truncate(0) # namefile中对应的是图像patch的文件路径
+        namefile.close()
+    # kmeascenter_40 = open("kmeans_center_40.csv",'ab')
+    # np.savetxt(kmeascenter_40, X=kmeans_cent_dis, delimiter=",")
+    # kmeascenter_40.close()
+    # return labels
