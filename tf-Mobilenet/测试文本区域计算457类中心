@@ -1,0 +1,30 @@
+def calcu_457():
+    num_pics,num_corrs = 0,0
+    centers457 = np.loadtxt(fname="/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/457cats_center.csv", dtype=np.float, delimiter=",")
+
+    xilidu = sorted(os.listdir("/home/sq/data/细粒度/train")) # 大类按照顺序 list ['555','Meco']
+    for index, class_name in enumerate(xilidu): # ['555']
+        nums_thisclass_corr = 0
+        nums_thisclass = 0 # 有效图像个数
+        print(str(index) + ":"+xilidu[index],end="")
+        classes = os.listdir(os.path.join('/home/sq/data/细粒度/train/', class_name))  # [”555冰炫“,"555金锐"]
+        for classe in classes:  # ["555冰炫"]
+            currentpath = pathlib.Path(os.path.join('/home/sq/data/crops/test/', classe))
+            img_paths = [str(path) for path in list(currentpath.glob('*/'))] # ["/home/sq/data/crops/test/555（冰炫）/0205_20357-1.jpg",...]
+            for img_path in img_paths:
+                temp = np.array(sift_fea(img_path)).T  # (2000,) 图像patch的2000维直方图
+                if temp is not True:
+                    num_pics += 1 # 有效图像个数
+                    nums_thisclass += 1
+                    diffMat = np.tile(temp, (457, 1)) - centers457  # centers 457*2000
+                    sqSum = (diffMat ** 2).sum(axis=1)
+                    dist = sqSum ** 0.5
+                    sortedIndices = dist.argsort()
+                    idx = sortedIndices[0]
+                    if idx==index:
+                        nums_thisclass_corr +=1
+                        num_corrs+=1
+        print("正确个数：",nums_thisclass_corr,end="")
+        print(" 有效图像个数：", nums_thisclass)
+    print("总测试集有效图像patch个数:",num_pics)
+    print("大类分类正确图像个数:",num_corrs)
