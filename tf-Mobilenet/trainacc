@@ -1,0 +1,47 @@
+def calcu_457():
+    # 406*406的numpy
+    dis_406 = np.zeros(shape=(406,406))
+
+    num_pics, num_corrs = 0, 0
+    centers406 = np.loadtxt(fname="/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/406cats_center.csv",
+                            dtype=np.float, delimiter=",")
+    filename_406 = sorted(os.listdir("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/dbscan"))
+    xilidu = sorted(os.listdir("/home/sq/data/细粒度/train"))  # 大类按照顺序 list ['555','Meco']
+    index = 0
+
+    # 先计算dbscan文件夹
+    for filename in filename_406:
+        print(str(index),":",filename)
+        currentpath = pathlib.Path("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/dbscan",filename)
+        img_paths = [str(path) for path in list(currentpath.glob('*/'))] # ['.../1.jpg']
+        num_inclass = 0
+        nums_thisclass_corr = 0
+        for img_path in img_paths:  # ['1.jpg']
+            num_inclass += 1
+            num_pics += 1
+            temp = np.array(sift_fea(img_path))  # patches*2000
+            # 这里有多个距离，每个temp中
+            min_inx, mindis = -1, 10000  # 判断一张图片是不是分类正确
+
+
+            diffMat = np.tile(np.array(temp).T, (406, 1)) - centers406  # centers 457*2000
+            sqSum = (diffMat ** 2).sum(axis=1)
+            dist = sqSum ** 0.5 # [3 1 0 2] 和第0个大类的距离 和第1个大类的距离 和第2个大类的距离 和第3个大类的距离
+            sortedIndices = dist.argsort() # 距离从小到大的原序列 [2 1 3 0]
+            dis_406[index][sortedIndices[0]] += 1
+            if sortedIndices[0]==index:
+                nums_thisclass_corr += 1
+                num_corrs += 1
+            else:
+                print(str(sortedIndices[0])+" "+xilidu[sortedIndices[0]])
+        index += 1
+
+        print("正确个数：", nums_thisclass_corr, end="")
+        print(" 总图像个数：", num_inclass)
+    print("总测试集总个数:", num_pics)
+    print("大类分类正确图像个数:", num_corrs)
+
+    file_csv = codecs.open("406traindis.csv", 'a', 'utf-8')  # 追加
+    writer = csv.writer(file_csv, delimiter=',', quotechar=' ', quoting=csv.QUOTE_MINIMAL)
+    for data in dis_406:
+        writer.writerow(data)
