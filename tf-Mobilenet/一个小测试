@@ -1,0 +1,25 @@
+def alittletest():
+    centers406 = np.loadtxt(fname="/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/406cats_center.csv",
+                            dtype=np.float, delimiter=",")
+    descriptor = cv2.SIFT_create()
+    imgpath = '0205_6570-3.jpg'
+    image = cv2.imread(imgpath)
+    read = np.load('0205_64709.npz')
+    result = read['a']
+    it = iter(result)  # 很多个坐标框
+    image_patch = []
+    (kps, features) = descriptor.detectAndCompute(image, None)  # 返回值 des为 128 维向量组成的列表； kps 为关键点列表，每个元素为一个 KeyPoint
+    patch_sift = np.zeros((2000,))
+    if kps and features.shape:  # 提取到sift特征，一个patch返回一个2000维的向量
+        for j in range(0, features.shape[0]):
+            fi = features[j]
+            diffMat = np.tile(fi, (2000, 1)) - centers2000  # centers 1000*128
+            sqSum = (diffMat ** 2).sum(axis=1)
+            dist = sqSum ** 0.5
+            sortedIndices = dist.argsort()
+            idx = sortedIndices[0]
+            patch_sift[idx] += 1
+    diffMat = np.tile(np.array(patch_sift).T, (406, 1)) - centers406  # centers 406*2000
+    sqSum = (diffMat ** 2).sum(axis=1)
+    dist = sqSum ** 0.5  # [3 1 0 2] 和第0个大类的距离 和第1个大类的距离 和第2个大类的距离 和第3个大类的距离
+    sortedIndices = dist.argsort()  # 距离从小到大的原序列 [2 1 3 0]
