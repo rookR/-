@@ -1,0 +1,48 @@
+def calmadis():
+    imgs_file = pathlib.Path("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/dbscan/555/")
+    img_paths = [str(path) for path in list(imgs_file.glob('*/'))]
+    imgdis = [] # 7*2000
+    for img_path in img_paths:
+        imgdis.append(sift_fea(img_path)) # 2000维度的直方图
+    print(len(imgdis))
+
+    reduc = np.squeeze(np.array(imgdis))
+
+
+    # 求协方差矩阵
+    # covX = np.cov(reduc,rowvar=False) # 2000*2000 协方差矩阵
+    # eig_val, eig_vec = np.linalg.eig(covX)
+    # e_val_index = np.argsort(-eig_val)  # 逆序排
+    # e_val_index = e_val_index[e_val_index > 1e-3]  # 需要特征值大于0的维度
+    # _PCA = eig_vec[:, e_val_index]  # 降维矩阵 Z = XU
+    # PCA_X = np.dot(reduc, _PCA)  # 降维
+    # _mean_x = PCA_X.mean(axis=0)  # 重新计算均值 去中心
+    # mean_removed = PCA_X  # - self._mean_x
+    # # cov = np.dot(mean_removed.T, mean_removed) / PCA_X.shape[0] # 重新计算协方差矩阵
+    # cov = np.cov(mean_removed, rowvar=False)
+    # cnvX_ = np.linalg.pinv(cov) # 协方差的伪逆矩阵
+
+
+    # np.savetxt(fname="/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha/555/PCA.csv", X=_PCA.real, delimiter=",")
+    # np.savetxt(fname="/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha/555/mean.csv", X=_mean_x.real,
+    #            delimiter=",")
+    # np.savetxt(fname="/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha/555/cnvX.csv", X=cnvX_.real,
+    #            delimiter=",")
+
+    _PCA = np.loadtxt(fname="/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha/555/PCA.csv", dtype=np.float,delimiter=",")
+    _mean_x = np.loadtxt(fname="/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha/555/mean.csv", dtype=np.float,delimiter=",")
+    cnvX_ = np.loadtxt(fname="/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha/555/cnvX.csv", dtype=np.float,delimiter=",")
+
+    # img = np.squeeze(sift_fea("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/dbscan/555/0205_25530-4.jpg"))
+    # img = np.dot(img, _PCA)
+    # X_data = img - _mean_x
+    # distance = np.dot(np.dot(X_data, cnvX_), X_data.T)
+    # print(np.sqrt(distance))
+    # #
+    # #
+    # #
+    # img2 = np.squeeze(sift_fea("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/dbscan/Meco/0514_24709_0.99973327-2.jpg"))
+    # img2 = np.dot(img2, _PCA)
+    # X_data2 = img2 - _mean_x
+    # distance2 = np.dot(np.dot(X_data2, cnvX_), X_data2.T)
+    # print(np.sqrt(distance2))
