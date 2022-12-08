@@ -1,0 +1,76 @@
+def calmadis(classicpath):
+    # classicpath /home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/dbscan/555/
+    lastname = os.path.basename(classicpath) # 555
+    # os.remove("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname)
+
+    if os.path.isdir("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname):
+        for i in os.listdir("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname):
+            # print(i)
+            txt_path = os.path.join("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname, i)
+            os.remove(txt_path)
+        os.rmdir("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname)
+
+
+
+
+    imgs_file = pathlib.Path(classicpath)
+    img_paths = [str(path) for path in list(imgs_file.glob('*/'))]
+    imgdis = [] # 7*2000
+    for img_path in img_paths:
+        imgdis.append(sift_fea(img_path)) # 2000维度的直方图
+
+
+    reduc = np.squeeze(np.array(imgdis))
+    print(reduc.shape[0])
+
+
+    covX = np.cov(reduc,rowvar=False) # 2000*2000 协方差矩阵
+    # if np.where(covX > 10000)[0] != 0:
+    if np.linalg.det(covX) == 0:  # 稀奇古怪逆矩阵
+        u, d, v = np.linalg.svd(covX)
+
+        for i in range(1, len(d)):
+            if sum(d[:i]) / sum(d) >= 0.9:
+                Index = i
+
+        T2 = np.dot(reduc, u[:, :Index])  # 变换矩阵 u[:,:Index] 变换后的矩阵 T2 7*1999
+
+        # 新样本 会不会协方差还是不存在
+        covX2 = np.cov(T2, rowvar=False)  # 求样本的协方差
+        conv2_ = np.linalg.pinv(covX2)
+        calculateunnormal = np.where(conv2_ > 10000)
+
+        if len(calculateunnormal[0]) != 0:
+            print(calculateunnormal[0])
+
+
+    #     os.mkdir("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname)
+    #
+    #     pcapath = "/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname + "/PCA.csv"
+    #     meanpath = "/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname + "/mean.csv"
+    #     cnvxpath = "/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname + "/cnvX.csv"
+    #     np.savetxt(fname=pcapath, X=u[:, :Index], delimiter=",")
+    #     np.savetxt(fname=meanpath, X=T2.mean(axis=0), delimiter=",")
+    #     np.savetxt(fname=cnvxpath, X=conv2_, delimiter=",")
+    # else:
+    #     os.mkdir("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname)
+    #
+    #     # pcapath = "/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname + "/PCA.csv"
+    #     meanpath = "/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname + "/mean.csv"
+    #     cnvxpath = "/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/maha_svd/" + lastname + "/cnvX.csv"
+    #     # np.savetxt(fname=pcapath, X=u[:, :Index], delimiter=",")
+    #     np.savetxt(fname=meanpath, X=reduc.mean(axis=0), delimiter=",")
+    #     np.savetxt(fname=cnvxpath, X=np.linalg.pinv(covX), delimiter=",")
+
+
+
+
+imgs_file = pathlib.Path("/home/sq/pycharm_projects/Basic_CNNs_TensorFlow2-master/k-means/dbscan/")
+filepaths = sorted([str(path) for path in list(imgs_file.glob('*/'))])
+files = [29]
+for ind in files:
+    print(str(ind)+":"+filepaths[ind]) # filepaths[36]
+    calmadis(filepaths[ind])
+    # 29 51 68 99 155 241 328 335有问题 协方差逆不对
+    # 18 36 37 76 108 154 160 169 193 215 240 259 307相关或者可以直接计算出协方差
+    # 157 245 257 263 297 357 381runtimewarning 没问题
